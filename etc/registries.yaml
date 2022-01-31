@@ -1,0 +1,9 @@
+mirrors:
+  "registry.uniquely-me.local":
+    endpoint:
+      - https://registry.uniquely-me.local
+
+configs:
+  registry.uniquely-me.local:
+    tls:
+      ca_file: "/etc/ssl/certs/registry.crt"

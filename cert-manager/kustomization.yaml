@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - https://github.com/jetstack/cert-manager/releases/download/v1.0.4/cert-manager.yaml
+
+generatorOptions:
+  disableNameSuffixHash: true
+secretGenerator:
+  - name: root-ca
+    namespace: cert-manager
+    files:
+      - tls.crt=../certs/root.crt
+      - tls.key=../certs/root.key
+      - ca.crt=../certs/root.crt
+      - ca.key=../certs/root.key
+

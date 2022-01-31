@@ -1,0 +1,7 @@
+.*.sw?
+/certs/root.crt
+/certs/root.key
+/certs/root.srl
+/certs/registry.crt
+/certs/registry.csr
+/certs/registry.key

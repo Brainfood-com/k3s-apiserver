@@ -1,0 +1,218 @@
+version: '2.4'
+
+x-etcd-environment: &_x-etcd-environment
+  ALLOW_NONE_AUTHENTICATION: "yes"
+  ETCD_LISTEN_PEER_URLS: http://0.0.0.0:2380
+  ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:2379
+  ETCD_INITIAL_CLUSTER_TOKEN: etcd-cluster
+  ETCD_INITIAL_CLUSTER: etcd1=http://etcd1:2380,etcd2=http://etcd2:2380,etcd3=http://etcd3:2380
+  ETCD_INITIAL_CLUSTER_STATE: new
+  ETCD_DATA_DIR: /bitnami/etcd/data/db
+  ETCD_WAL_DIR: /bitnami/etcd/data/wal
+
+x-etcd-base: &_x-etcd-base
+  image: docker.io/bitnami/etcd:3
+  entrypoint: ["/etcd-entrypoint.sh", "/opt/bitnami/scripts/etcd/entrypoint.sh"]
+  command: ["/opt/bitnami/scripts/etcd/run.sh"]
+  user: root
+
+x-k3s-master-base: &_x-k3s-master-base
+  image: "docker.io/rancher/k3s:${K3S_VERSION:-latest}"
+  networks:
+    default:
+      aliases:
+        - k3s-master
+  tmpfs:
+    - /run
+    - /var/run
+  ulimits:
+    nproc: 65535
+    nofile:
+      soft: 65535
+      hard: 65535
+  privileged: true
+  restart: always
+  ports:
+    - 6443
+  environment:
+    - K3S_KUBECONFIG_OUTPUT=/output/kubeconfig.yaml
+    - K3S_KUBECONFIG_MODE=666
+    - K3S_NODE_NAME=master
+  volumes:
+    - server:/var/lib/rancher/k3s/server
+    - output:/output
+    - ./etc/registries.yaml:/etc/rancher/k3s/registries.yaml:ro
+    - ./certs/root.crt:/etc/ssl/certs/root.crt:ro
+    - ./certs/registry.crt:/etc/ssl/certs/registry.crt:ro
+    - .:${APP_ROOT_MOUNT?Please set APP_ROOT_MOUNT(where to mount $PWD)}
+
+x-k3s-agent-base: &_x-k3s-agent-base
+  image: "docker.io/rancher/k3s:${K3S_VERSION:-latest}"
+  tmpfs:
+    - /run
+    - /var/run
+  ulimits:
+    nproc: 65535
+    nofile:
+      soft: 65535
+      hard: 65535
+  volumes:
+    - .:${APP_ROOT_MOUNT?Please specify where to mount $PWD}
+    - ./etc/registries.yaml:/etc/rancher/k3s/registries.yaml:ro
+    - ./certs/root.crt:/etc/ssl/certs/root.crt:ro
+    - ./certs/registry.crt:/etc/ssl/certs/registry.crt:ro
+    - server:/var/lib/rancher/k3s/server:ro
+  privileged: true
+  restart: always
+  networks:
+    default:
+    nginx:
+  environment:
+    - K3S_URL=https://k3s-master:6443
+    - K3S_TOKEN_FILE=/var/lib/rancher/k3s/server/node-token
+    - K3S_NODE_NAME=k3s-agent
+    - VIRTUAL_HOST=${VHOST_STUB},*${VHOST_SUFFIX}
+    - VIRTUAL_PROTO=https
+    - VIRTUAL_PORT=443
+    - SELF_SIGNED_HOST=${VHOST_STUB},*${VHOST_SUFFIX}
+    - HTTPS_METHOD=noredirect
+
+x-coredns-base: &_x-coredns-base
+  image: docker.io/coredns/coredns
+  command: ['-conf', '/etc/coredns/Corefile']
+  restart: always
+  volumes:
+    - server:/var/lib/rancher/k3s/server
+    - output:/output
+    - ./etc/coredns:/etc/coredns:ro
+
+networks:
+  default:
+  nginx:
+    external:
+      name: nginx
+
+services:
+  etcd1:
+    <<: *_x-etcd-base
+    environment:
+      <<: *_x-etcd-environment
+      ETCD_NAME: etcd1
+      ETCD_INITIAL_ADVERTISE_PEER_URLS: http://etcd1:2380
+      ETCD_ADVERTISE_CLIENT_URLS: http://etcd1:2379
+    volumes:
+    - ./scripts/etcd-entrypoint.sh:/etcd-entrypoint.sh:ro
+    - etcd1-data:/bitnami/etcd/data
+
+  etcd2:
+    <<: *_x-etcd-base
+    environment:
+      <<: *_x-etcd-environment
+      ETCD_NAME: etcd2
+      ETCD_INITIAL_ADVERTISE_PEER_URLS: http://etcd2:2380
+      ETCD_ADVERTISE_CLIENT_URLS: http://etcd2:2379
+    volumes:
+    - ./scripts/etcd-entrypoint.sh:/etcd-entrypoint.sh:ro
+    - etcd2-data:/bitnami/etcd/data
+
+  etcd3:
+    <<: *_x-etcd-base
+    environment:
+      <<: *_x-etcd-environment
+      ETCD_NAME: etcd3
+      ETCD_INITIAL_ADVERTISE_PEER_URLS: http://etcd3:2380
+      ETCD_ADVERTISE_CLIENT_URLS: http://etcd3:2379
+    volumes:
+    - ./scripts/etcd-entrypoint.sh:/etcd-entrypoint.sh:ro
+    - etcd3-data:/bitnami/etcd/data
+
+  k3s-master-1:
+    <<: *_x-k3s-master-base
+    command: [
+      "server",
+      "--with-node-id",
+      "--disable=traefik,coredns",
+      "--node-taint", "master=true:NoSchedule",
+      "--datastore-endpoint=http://etcd1:2379",
+      "--cluster-init",
+    ]
+
+  k3s-master-2:
+    <<: *_x-k3s-master-base
+    command: [
+      "server",
+      "--with-node-id",
+      "--disable=traefik,coredns",
+      "--node-taint", "master=true:NoSchedule",
+      "--datastore-endpoint=http://etcd2:2379",
+      "--server=http://k3s-master-1:6443",
+    ]
+
+  k3s-master-3:
+    <<: *_x-k3s-master-base
+    command: [
+      "server",
+      "--with-node-id",
+      "--disable=traefik,coredns",
+      "--node-taint", "master=true:NoSchedule",
+      "--datastore-endpoint=http://etcd3:2379",
+      "--server=http://k3s-master-1:6443",
+    ]
+
+  k3s-coredns-1:
+    <<: *_x-coredns-base
+
+  k3s-coredns-2:
+    <<: *_x-coredns-base
+
+  k3s-coredns-3:
+    <<: *_x-coredns-base
+
+  k3s-agent-1:
+    <<: *_x-k3s-agent-base
+    command: [
+      "agent",
+      "--with-node-id",
+    ]
+
+  k3s-agent-2:
+    <<: *_x-k3s-agent-base
+    command: [
+      "agent",
+      "--with-node-id",
+    ]
+
+  registry:
+    image: registry:2
+    networks:
+      default:
+        aliases:
+          - ${REGISTRY_ID?Please set REGISTRY_ID}.registry
+      nginx:
+    ports:
+      - 443
+    volumes:
+    - registry:/var/lib/registry
+    - ./certs/registry.crt:/certs/registry.crt:ro
+    - ./certs/registry.key:/certs/registry.key:ro
+
+    environment:
+    - VIRTUAL_HOST=${REGISTRY_ID?Please set REGISTRY_ID}.registry
+    - VIRTUAL_PORT=443
+    - VIRTUAL_PROTO=https
+    - HTTPS_METHOD=noredirect
+    - CERT_NAME=default
+    - REGISTRY_HTTP_ADDR=0.0.0.0:443
+    - REGISTRY_HTTP_TLS_CERTIFICATE=/certs/registry.crt
+    - REGISTRY_HTTP_TLS_KEY=/certs/registry.key
+
+volumes:
+  etcd1-data:
+  etcd2-data:
+  etcd3-data:
+  server: {}
+  output: {}
+  registry:
+    external: true
+    name: ${REGISTRY_VOLUME_NAME?Please set REGISTRY_VOLUME_NAME}
+  

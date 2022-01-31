@@ -1,0 +1,27 @@
+.:53 {
+	errors
+	health {
+		lameduck 5s
+	}
+	ready
+	kubernetes cluster.local in-addr.arpa ip6.arpa {
+		tls /var/lib/rancher/k3s/server/tls/client-admin.crt /var/lib/rancher/k3s/server/tls/client-admin.key /var/lib/rancher/k3s/server/tls/server-ca.crt
+		#kubeconfig /output/kubeconfig.yaml
+		endpoint https://k3s-master:6443
+		pods insecure
+		fallthrough in-addr.arpa ip6.arpa
+		ttl 30
+	}
+#	hosts /etc/coredns/NodeHosts {
+#		ttl 60
+#		reload 15s
+#		fallthrough
+#	}
+	prometheus :9153
+	forward . /etc/resolv.conf
+	cache 30
+	loop
+	reload
+	loadbalance
+}
+

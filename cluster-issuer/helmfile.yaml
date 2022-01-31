@@ -1,0 +1,7 @@
+---
+releases:
+  - name: cluster-issuer
+    namespace: cert-manager
+    chart: .
+    wait: true
+---

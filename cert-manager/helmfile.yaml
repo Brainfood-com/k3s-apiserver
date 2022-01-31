@@ -1,0 +1,6 @@
+---
+releases:
+  - name: cert-manager
+    chart: .
+    wait: true
+---
