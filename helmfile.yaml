@@ -1,3 +1,8 @@
+bases:
+  - environments.yaml
+
+---
+
 helmfiles:
   - cert-manager/helmfile.yaml
   - cluster-issuer/helmfile.yaml

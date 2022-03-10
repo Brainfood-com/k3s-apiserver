@@ -2,6 +2,8 @@
 
 set -e
 
+CONTEXT_DIR="$1"
+
 TOP_DIR="$(cd "$(dirname "$0")/.."; echo "$PWD")"
 export TOP_DIR
 
@@ -30,8 +32,8 @@ kubectl config --kubeconfig="$tmpd/config.docker" view --raw=true -o jsonpath='{
 kubectl config --kubeconfig="$tmpd/config.docker" view --raw=true -o jsonpath='{.users[].user.client-certificate-data}' | base64 -d > "$tmpd/client-certificate"
 kubectl config --kubeconfig="$tmpd/config.docker" view --raw=true -o jsonpath='{.users[].user.client-key-data}' | base64 -d > "$tmpd/client-key"
 
-kubectl config set-cluster "$TOP_DIR" --embed-certs=true --server="https://$MASTER_IP:6443" --certificate-authority="$tmpd/cluster-certificate-authority" > /dev/null
-kubectl config set-credentials "$TOP_DIR" --embed-certs=true --client-certificate="$tmpd/client-certificate" --client-key="$tmpd/client-key" > /dev/null
-kubectl config set-context "$TOP_DIR" --cluster="$TOP_DIR" --user="$TOP_DIR" > /dev/null
-kubectl config use-context "$TOP_DIR"
+kubectl config set-cluster "$CONTEXT_DIR" --embed-certs=true --server="https://$MASTER_IP:6443" --certificate-authority="$tmpd/cluster-certificate-authority" > /dev/null
+kubectl config set-credentials "$CONTEXT_DIR" --embed-certs=true --client-certificate="$tmpd/client-certificate" --client-key="$tmpd/client-key" > /dev/null
+kubectl config set-context "$CONTEXT_DIR" --cluster="$CONTEXT_DIR" --user="$CONTEXT_DIR" > /dev/null
+kubectl config use-context "$CONTEXT_DIR"
 

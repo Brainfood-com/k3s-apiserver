@@ -67,6 +67,8 @@ x-k3s-agent-base: &_x-k3s-agent-base
   networks:
     default:
     nginx:
+  ports:
+    - 443
   environment:
     - K3S_URL=https://k3s-master:6443
     - K3S_TOKEN_FILE=/var/lib/rancher/k3s/server/node-token

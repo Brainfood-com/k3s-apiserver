@@ -1,6 +1,10 @@
+bases:
+  - ../environments.yaml
+
 ---
 releases:
   - name: cert-manager
     chart: .
     wait: true
+    condition: cert-manager.enabled
 ---

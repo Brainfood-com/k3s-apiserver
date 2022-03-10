@@ -1,0 +1,7 @@
+environments:
+  default:
+    values:
+      - cert-manager:
+          enabled: {{ env "CERT_MANAGER__ENABLED" | default true }}
+        istio:
+          enabled: {{ env "ISTIO__ENABLED" | default true }}

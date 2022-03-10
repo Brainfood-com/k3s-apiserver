@@ -1,7 +1,11 @@
+bases:
+  - ../environments.yaml
+
 ---
 releases:
   - name: cluster-issuer
     namespace: cert-manager
     chart: .
     wait: true
+    condition: cert-manager.enabled
 ---
