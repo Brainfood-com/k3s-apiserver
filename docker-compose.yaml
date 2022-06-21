@@ -134,7 +134,7 @@ services:
       "server",
       "--with-node-id",
       "--disable=traefik,coredns",
-      "--node-taint", "master=true:NoSchedule",
+      "--node-taint", "node-role.kubernetes.io/master=true:NoSchedule",
       "--datastore-endpoint=http://etcd1:2379",
       "--cluster-init",
     ]
@@ -145,7 +145,7 @@ services:
       "server",
       "--with-node-id",
       "--disable=traefik,coredns",
-      "--node-taint", "master=true:NoSchedule",
+      "--node-taint", "node-role.kubernetes.io/master=true:NoSchedule",
       "--datastore-endpoint=http://etcd2:2379",
       "--server=http://k3s-master-1:6443",
     ]
@@ -156,7 +156,7 @@ services:
       "server",
       "--with-node-id",
       "--disable=traefik,coredns",
-      "--node-taint", "master=true:NoSchedule",
+      "--node-taint", "node-role.kubernetes.io/master=true:NoSchedule",
       "--datastore-endpoint=http://etcd3:2379",
       "--server=http://k3s-master-1:6443",
     ]
