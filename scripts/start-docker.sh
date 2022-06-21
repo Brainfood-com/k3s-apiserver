@@ -21,7 +21,6 @@ case "$1" in
 esac
 
 "$TOP_DIR/scripts/ensure-certs.sh"
-docker-compose -f "$TOP_DIR/docker-compose.yaml" up -d registry
 "$TOP_DIR/scripts/wait-for-etcd.sh"
 
 docker-compose -f "$TOP_DIR/docker-compose.yaml" up -d k3s-master-1

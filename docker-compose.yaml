@@ -184,37 +184,10 @@ services:
       "--with-node-id",
     ]
 
-  registry:
-    image: registry:2
-    networks:
-      default:
-        aliases:
-          - ${REGISTRY_ID?Please set REGISTRY_ID}.registry
-      nginx:
-    ports:
-      - 443
-    volumes:
-    - registry:/var/lib/registry
-    - ./certs/registry.crt:/certs/registry.crt:ro
-    - ./certs/registry.key:/certs/registry.key:ro
-
-    environment:
-    - VIRTUAL_HOST=${REGISTRY_ID?Please set REGISTRY_ID}.registry
-    - VIRTUAL_PORT=443
-    - VIRTUAL_PROTO=https
-    - HTTPS_METHOD=noredirect
-    - CERT_NAME=default
-    - REGISTRY_HTTP_ADDR=0.0.0.0:443
-    - REGISTRY_HTTP_TLS_CERTIFICATE=/certs/registry.crt
-    - REGISTRY_HTTP_TLS_KEY=/certs/registry.key
-
 volumes:
   etcd1-data:
   etcd2-data:
   etcd3-data:
   server: {}
   output: {}
-  registry:
-    external: true
-    name: ${REGISTRY_VOLUME_NAME?Please set REGISTRY_VOLUME_NAME}
   
