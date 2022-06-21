@@ -39,4 +39,4 @@ docker-compose -f "$TOP_DIR/docker-compose.yaml" up -d k3s-master-2 k3s-master-3
 
 cd "$TOP_DIR"
 
-helmfile --debug apply
+#helmfile apply
