@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -ex
+set -e
 
 TOP_DIR="$(cd "$(dirname "$0")/.."; echo "$PWD")"
 export TOP_DIR
