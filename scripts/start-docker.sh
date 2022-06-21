@@ -35,7 +35,7 @@ docker-compose -f "$TOP_DIR/docker-compose.yaml" up -d k3s-master-2 k3s-master-3
 
 #docker-compose -f "$TOP_DIR/docker-compose.yaml" up -d k3s-proxy
 
-[[ ${features[istio]} ]] && istioctl install -yf "$TOP_DIR/istio-minimal-operator.yaml"
+#[[ ${features[istio]} ]] && istioctl install -yf "$TOP_DIR/istio-minimal-operator.yaml"
 
 cd "$TOP_DIR"
 
