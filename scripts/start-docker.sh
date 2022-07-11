@@ -29,7 +29,7 @@ _compose up -d k3s-master-1
 
 _compose up -d k3s-coredns-1 k3s-coredns-2 k3s-coredns-3
 "$APISERVER_DIR/scripts/install-cluster-dns.sh" "$CONTEXT_DIR"
-_compose up -d k3s-agent-1 k3s-agent-2 k3s-storage-1 "${k8s_nodes[@]}"
+_compose up -d k3s-agent-1 k3s-agent-2 "${k8s_nodes[@]}"
 _compose up -d k3s-master-2 k3s-master-3
 "$APISERVER_DIR/scripts/wait-for-system-pods.sh" 1
 #_compose up -d k3s-proxy
