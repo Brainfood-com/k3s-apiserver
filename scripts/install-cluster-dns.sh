@@ -4,9 +4,14 @@ set -e
 TOP_DIR="$(cd "$(dirname "$0")/.."; echo "$PWD")"
 export TOP_DIR
 
-COREDNS_IP_1=$(docker-compose -f "$TOP_DIR/docker-compose.yaml" exec -T k3s-master-1 ping -c 1 -q k3s-coredns-1 | sed -n 's/^PING.*(\(.*\)).*/\1/p')
-COREDNS_IP_2=$(docker-compose -f "$TOP_DIR/docker-compose.yaml" exec -T k3s-master-1 ping -c 1 -q k3s-coredns-2 | sed -n 's/^PING.*(\(.*\)).*/\1/p')
-COREDNS_IP_3=$(docker-compose -f "$TOP_DIR/docker-compose.yaml" exec -T k3s-master-1 ping -c 1 -q k3s-coredns-3 | sed -n 's/^PING.*(\(.*\)).*/\1/p')
+CONTEXT_DIR="$1"
+_compose() {
+	docker-compose --project-directory "$CONTEXT_DIR" -f "$TOP_DIR/docker-compose.yaml" "$@"
+}
+
+COREDNS_IP_1=$(_compose exec -T k3s-master-1 ping -c 1 -q k3s-coredns-1 | sed -n 's/^PING.*(\(.*\)).*/\1/p')
+COREDNS_IP_2=$(_compose exec -T k3s-master-1 ping -c 1 -q k3s-coredns-2 | sed -n 's/^PING.*(\(.*\)).*/\1/p')
+COREDNS_IP_3=$(_compose exec -T k3s-master-1 ping -c 1 -q k3s-coredns-3 | sed -n 's/^PING.*(\(.*\)).*/\1/p')
 
 kubectl apply -f /dev/stdin << _EOF_
 apiVersion: v1

@@ -2,10 +2,10 @@
 
 set -e
 
-TOP_DIR="$(cd "$(dirname "$0")/.."; echo "$PWD")"
-export TOP_DIR
+APISERVER_DIR="$(cd "$(dirname "$0")/.."; echo "$PWD")"
+export APISERVER_DIR
 
-. "$TOP_DIR/scripts/_parse_args.bash"
+. "$APISERVER_DIR/scripts/_parse_args.bash"
 
-docker-compose -f "$TOP_DIR/docker-compose.yaml" down "$@"
+_compose down "$@"
 

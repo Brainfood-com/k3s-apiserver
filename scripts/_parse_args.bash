@@ -1,12 +1,14 @@
 #!/bin/bash
 
-CONTEXT_DIR="$TOP_DIR"
+CONTEXT_DIR="$APISERVER_DIR"
 
 declare -a args
 declare -A features=(
 	[cert-manager]=1
 	[istio]=1
 )
+declare -a compose_files=(-f "$APISERVER_DIR/docker-compose.yaml")
+declare -a k8s_nodes=()
 
 while [[ $# -gt 0 ]]; do
 	arg="$1"
@@ -22,6 +24,14 @@ while [[ $# -gt 0 ]]; do
 			;;
 		(--no-feature)
 			features[$1]=
+			shift
+			;;
+		(-f)
+			compose_files+=(-f "$1")
+			shift
+			;;
+		(-n)
+			k8s_nodes+=("$1")
 			shift
 			;;
 		(*)
@@ -41,3 +51,7 @@ for feature in "${!features[@]}"; do
 done
 
 export CONTEXT_DIR
+
+_compose() {
+	docker-compose --project-directory "$CONTEXT_DIR" "${compose_files[@]}" "$@"
+}

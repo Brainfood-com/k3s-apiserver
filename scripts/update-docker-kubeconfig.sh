@@ -7,6 +7,12 @@ CONTEXT_DIR="$1"
 TOP_DIR="$(cd "$(dirname "$0")/.."; echo "$PWD")"
 export TOP_DIR
 
+CONTEXT_DIR="$1"
+
+_compose() {
+	docker-compose --project-directory "$CONTEXT_DIR" -f "$TOP_DIR/docker-compose.yaml" "$@"
+}
+
 tmpd="$(mktemp -d)"
 onexit() {
 	[[ $tmpd ]] && rm -rf "$tmpd"
@@ -18,7 +24,7 @@ trap onexit EXIT
 
 declare -i count=10
 while [[ $count > 0 ]]; do
-	if docker-compose -f "$TOP_DIR/docker-compose.yaml" exec -T k3s-master-1 cat /output/kubeconfig.yaml > "$tmpd/config.docker" 2>/dev/null; then
+	if _compose exec -T k3s-master-1 cat /output/kubeconfig.yaml > "$tmpd/config.docker" 2>/dev/null; then
 		break
 	fi
 	sleep 1
@@ -26,7 +32,7 @@ while [[ $count > 0 ]]; do
 done
 chmod 600 "$tmpd/config.docker"
 
-MASTER_IP=$(docker-compose -f "$TOP_DIR/docker-compose.yaml" exec -T k3s-master-1 ping -c 1 -q k3s-master-1 | sed -n 's/^PING.*(\(.*\)).*/\1/p')
+MASTER_IP=$(_compose exec -T k3s-master-1 ping -c 1 -q k3s-master-1 | sed -n 's/^PING.*(\(.*\)).*/\1/p')
 
 kubectl config --kubeconfig="$tmpd/config.docker" view --raw=true -o jsonpath='{.clusters[].cluster.certificate-authority-data}' | base64 -d > "$tmpd/cluster-certificate-authority"
 kubectl config --kubeconfig="$tmpd/config.docker" view --raw=true -o jsonpath='{.users[].user.client-certificate-data}' | base64 -d > "$tmpd/client-certificate"

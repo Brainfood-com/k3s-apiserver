@@ -1,4 +1,8 @@
-version: '2.4'
+version: '3.4'
+
+x-extra-hosts: &_x_extra_hosts
+  extra_hosts:
+    - "${APP_REGISTRY_NAME}:${APP_REGISTRY_ADDRESS}"
 
 x-etcd-environment: &_x-etcd-environment
   ALLOW_NONE_AUTHENTICATION: "yes"
@@ -16,7 +20,35 @@ x-etcd-base: &_x-etcd-base
   command: ["/opt/bitnami/scripts/etcd/run.sh"]
   user: root
 
+x-root-cert-volume: &_x-root-cert-volume
+  type: bind
+  source: ${CONTEXT_DIR}/certs/root.crt
+  target: /etc/ssl/certs/root.crt
+  read_only: true
+  bind:
+    create_host_path: false
+
+x-kubelet-volume: &_x-kubelet-volume
+  type: volume
+  target: /var/lib/kubelet
+#  volume:
+#    propagation: shared
+
+x-registries-yaml-volume: &_x-registries-yaml-volume
+  type: bind
+  source: ${APISERVER_DIR}/etc/registries.yaml
+  target: /etc/rancher/k3s/registries.yaml
+  read_only: true
+  bind:
+    create_host_path: false
+
+x-k3s-master-env: &_x-k3s-master-env
+  K3S_KUBECONFIG_OUTPUT: /output/kubeconfig.yaml
+  K3S_KUBECONFIG_MODE: "666"
+  K3S_NODE_NAME: master
+
 x-k3s-master-base: &_x-k3s-master-base
+  <<: *_x_extra_hosts
   image: "docker.io/rancher/k3s:${K3S_VERSION:-latest}"
   networks:
     default:
@@ -35,18 +67,27 @@ x-k3s-master-base: &_x-k3s-master-base
   ports:
     - 6443
   environment:
-    - K3S_KUBECONFIG_OUTPUT=/output/kubeconfig.yaml
-    - K3S_KUBECONFIG_MODE=666
-    - K3S_NODE_NAME=master
+    <<: *_x-k3s-master-env
   volumes:
     - server:/var/lib/rancher/k3s/server
     - output:/output
-    - ./etc/registries.yaml:/etc/rancher/k3s/registries.yaml:ro
-    - ./certs/root.crt:/etc/ssl/certs/root.crt:ro
-    - ./certs/registry.crt:/etc/ssl/certs/registry.crt:ro
-    - .:${APP_ROOT_MOUNT?Please set APP_ROOT_MOUNT(where to mount $PWD)}
+    - ${APP_ROOT_DIR?Please set APP_ROOT_DIR}:${APP_ROOT_MOUNT?Please set APP_ROOT_MOUNT(where to mount $PWD)}
+#    - *_x-registries-yaml-volume
+    - *_x-root-cert-volume
+    - *_x-kubelet-volume
+
+x-k3s-agent-env: &_x-k3s-agent-env
+  K3S_URL: https://k3s-master:6443
+  K3S_TOKEN_FILE: /var/lib/rancher/k3s/server/node-token
+  K3S_NODE_NAME: k3s-agent
+  VIRTUAL_HOST: ${VHOST_STUB},*${VHOST_SUFFIX},${APP_REGISTRY_NAME}
+  VIRTUAL_PROTO: https
+  VIRTUAL_PORT: "443"
+  SELF_SIGNED_HOST: ${VHOST_STUB},*${VHOST_SUFFIX}
+  HTTPS_METHOD: noredirect
 
 x-k3s-agent-base: &_x-k3s-agent-base
+  <<: *_x_extra_hosts
   image: "docker.io/rancher/k3s:${K3S_VERSION:-latest}"
   tmpfs:
     - /run
@@ -57,10 +98,10 @@ x-k3s-agent-base: &_x-k3s-agent-base
       soft: 65535
       hard: 65535
   volumes:
-    - .:${APP_ROOT_MOUNT?Please specify where to mount $PWD}
-    - ./etc/registries.yaml:/etc/rancher/k3s/registries.yaml:ro
-    - ./certs/root.crt:/etc/ssl/certs/root.crt:ro
-    - ./certs/registry.crt:/etc/ssl/certs/registry.crt:ro
+    - ${APP_ROOT_DIR?Please set APP_ROOT_DIR}:${APP_ROOT_MOUNT?Please specify where to mount $PWD}
+#    - *_x-registries-yaml-volume
+    - *_x-root-cert-volume
+    - *_x-kubelet-volume
     - server:/var/lib/rancher/k3s/server:ro
   privileged: true
   restart: always
@@ -70,14 +111,7 @@ x-k3s-agent-base: &_x-k3s-agent-base
   ports:
     - 443
   environment:
-    - K3S_URL=https://k3s-master:6443
-    - K3S_TOKEN_FILE=/var/lib/rancher/k3s/server/node-token
-    - K3S_NODE_NAME=k3s-agent
-    - VIRTUAL_HOST=${VHOST_STUB},*${VHOST_SUFFIX}
-    - VIRTUAL_PROTO=https
-    - VIRTUAL_PORT=443
-    - SELF_SIGNED_HOST=${VHOST_STUB},*${VHOST_SUFFIX}
-    - HTTPS_METHOD=noredirect
+    <<: *_x-k3s-agent-env
 
 x-coredns-base: &_x-coredns-base
   image: docker.io/coredns/coredns
@@ -86,13 +120,13 @@ x-coredns-base: &_x-coredns-base
   volumes:
     - server:/var/lib/rancher/k3s/server
     - output:/output
-    - ./etc/coredns:/etc/coredns:ro
+    - ${APISERVER_DIR}/etc/coredns:/etc/coredns:ro
 
 networks:
   default:
   nginx:
-    external:
-      name: nginx
+    name: nginx
+    external: true
 
 services:
   etcd1:
@@ -103,7 +137,7 @@ services:
       ETCD_INITIAL_ADVERTISE_PEER_URLS: http://etcd1:2380
       ETCD_ADVERTISE_CLIENT_URLS: http://etcd1:2379
     volumes:
-    - ./scripts/etcd-entrypoint.sh:/etcd-entrypoint.sh:ro
+    - ${APISERVER_DIR}/scripts/etcd-entrypoint.sh:/etcd-entrypoint.sh:ro
     - etcd1-data:/bitnami/etcd/data
 
   etcd2:
@@ -114,7 +148,7 @@ services:
       ETCD_INITIAL_ADVERTISE_PEER_URLS: http://etcd2:2380
       ETCD_ADVERTISE_CLIENT_URLS: http://etcd2:2379
     volumes:
-    - ./scripts/etcd-entrypoint.sh:/etcd-entrypoint.sh:ro
+    - ${APISERVER_DIR}/scripts/etcd-entrypoint.sh:/etcd-entrypoint.sh:ro
     - etcd2-data:/bitnami/etcd/data
 
   etcd3:
@@ -125,41 +159,47 @@ services:
       ETCD_INITIAL_ADVERTISE_PEER_URLS: http://etcd3:2380
       ETCD_ADVERTISE_CLIENT_URLS: http://etcd3:2379
     volumes:
-    - ./scripts/etcd-entrypoint.sh:/etcd-entrypoint.sh:ro
+    - ${APISERVER_DIR}/scripts/etcd-entrypoint.sh:/etcd-entrypoint.sh:ro
     - etcd3-data:/bitnami/etcd/data
 
   k3s-master-1:
     <<: *_x-k3s-master-base
     command: [
       "server",
-      "--with-node-id",
-      "--disable=traefik,coredns",
+      "--disable=traefik,coredns,local-storage",
       "--node-taint", "node-role.kubernetes.io/master=true:NoSchedule",
       "--datastore-endpoint=http://etcd1:2379",
       "--cluster-init",
     ]
+    environment:
+      <<: *_x-k3s-agent-env
+      K3S_NODE_NAME: master-1
 
   k3s-master-2:
     <<: *_x-k3s-master-base
     command: [
       "server",
-      "--with-node-id",
-      "--disable=traefik,coredns",
+      "--disable=traefik,coredns,local-storage",
       "--node-taint", "node-role.kubernetes.io/master=true:NoSchedule",
       "--datastore-endpoint=http://etcd2:2379",
       "--server=http://k3s-master-1:6443",
     ]
+    environment:
+      <<: *_x-k3s-agent-env
+      K3S_NODE_NAME: master-2
 
   k3s-master-3:
     <<: *_x-k3s-master-base
     command: [
       "server",
-      "--with-node-id",
-      "--disable=traefik,coredns",
+      "--disable=traefik,coredns,local-storage",
       "--node-taint", "node-role.kubernetes.io/master=true:NoSchedule",
       "--datastore-endpoint=http://etcd3:2379",
       "--server=http://k3s-master-1:6443",
     ]
+    environment:
+      <<: *_x-k3s-agent-env
+      K3S_NODE_NAME: master-3
 
   k3s-coredns-1:
     <<: *_x-coredns-base
@@ -174,15 +214,19 @@ services:
     <<: *_x-k3s-agent-base
     command: [
       "agent",
-      "--with-node-id",
     ]
+    environment:
+      <<: *_x-k3s-agent-env
+      K3S_NODE_NAME: agent-1
 
   k3s-agent-2:
     <<: *_x-k3s-agent-base
     command: [
       "agent",
-      "--with-node-id",
     ]
+    environment:
+      <<: *_x-k3s-agent-env
+      K3S_NODE_NAME: agent-2
 
 volumes:
   etcd1-data:
