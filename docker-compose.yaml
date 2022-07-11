@@ -172,7 +172,7 @@ services:
       "--cluster-init",
     ]
     environment:
-      <<: *_x-k3s-agent-env
+      <<: *_x-k3s-master-env
       K3S_NODE_NAME: master-1
 
   k3s-master-2:
@@ -185,7 +185,7 @@ services:
       "--server=http://k3s-master-1:6443",
     ]
     environment:
-      <<: *_x-k3s-agent-env
+      <<: *_x-k3s-master-env
       K3S_NODE_NAME: master-2
 
   k3s-master-3:
@@ -198,7 +198,7 @@ services:
       "--server=http://k3s-master-1:6443",
     ]
     environment:
-      <<: *_x-k3s-agent-env
+      <<: *_x-k3s-master-env
       K3S_NODE_NAME: master-3
 
   k3s-coredns-1:
