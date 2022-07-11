@@ -20,7 +20,7 @@ case "$1" in
 		;;
 esac
 
-"$APISERVER_DIR/scripts/ensure-certs.sh"
+"$APISERVER_DIR/scripts/ensure-certs.sh" "$CONTEXT_DIR"
 "$APISERVER_DIR/scripts/wait-for-etcd.sh" "$CONTEXT_DIR"
 
 _compose up -d k3s-master-1
