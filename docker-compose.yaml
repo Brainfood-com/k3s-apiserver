@@ -103,6 +103,7 @@ x-k3s-agent-base: &_x-k3s-agent-base
     - *_x-root-cert-volume
     - *_x-kubelet-volume
     - server:/var/lib/rancher/k3s/server:ro
+    - local-path-provisioner:/opt/local-path-provisioner
   privileged: true
   restart: always
   networks:
@@ -234,4 +235,5 @@ volumes:
   etcd3-data:
   server: {}
   output: {}
+  local-path-provisioner:
   
