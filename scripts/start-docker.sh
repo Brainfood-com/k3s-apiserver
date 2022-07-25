@@ -19,7 +19,9 @@ case "$1" in
 		exit 1
 		;;
 esac
-
+if ! _compose ls 1>/dev/null 2>/dev/null; then
+	_compose ls
+fi
 "$APISERVER_DIR/scripts/ensure-certs.sh" "$CONTEXT_DIR"
 "$APISERVER_DIR/scripts/wait-for-etcd.sh" "$CONTEXT_DIR"
 
