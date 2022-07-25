@@ -80,10 +80,10 @@ x-k3s-agent-env: &_x-k3s-agent-env
   K3S_URL: https://k3s-master:6443
   K3S_TOKEN_FILE: /var/lib/rancher/k3s/server/node-token
   K3S_NODE_NAME: k3s-agent
-  VIRTUAL_HOST: ${VHOST_STUB},*${VHOST_SUFFIX},${APP_REGISTRY_NAME}
+  VIRTUAL_HOST: ${VHOST_STUB},*${VHOST_SUFFIX}${APP_EXTRA_VHOSTS}
   VIRTUAL_PROTO: https
   VIRTUAL_PORT: "443"
-  SELF_SIGNED_HOST: ${VHOST_STUB},*${VHOST_SUFFIX}
+  SELF_SIGNED_HOST: ${VHOST_STUB},*${VHOST_SUFFIX}${APP_EXTRA_VHOSTS}
   HTTPS_METHOD: noredirect
 
 x-k3s-agent-base: &_x-k3s-agent-base
