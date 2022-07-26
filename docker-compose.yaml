@@ -19,6 +19,7 @@ x-etcd-base: &_x-etcd-base
   entrypoint: ["/etcd-entrypoint.sh", "/opt/bitnami/scripts/etcd/entrypoint.sh"]
   command: ["/opt/bitnami/scripts/etcd/run.sh"]
   user: root
+  restart: always
 
 x-root-cert-volume: &_x-root-cert-volume
   type: bind
