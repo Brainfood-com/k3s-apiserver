@@ -76,7 +76,7 @@ _start_animation() {
 }
 
 _animation_progress() {
-	printf "$animation_message: %s %s\r" "${animations[$animation_index]}" "$2"
+	printf "$animation_message: %s %s\r" "${animations[$animation_index]}" "$1"
 	animation_index=$(( ($animation_index + 1) % ${#animations[*]} ))
 }
 
