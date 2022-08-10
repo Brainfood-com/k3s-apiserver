@@ -1,0 +1,67 @@
+version: '3.4'
+
+x-extra-hosts: &_x_extra_hosts
+  extra_hosts:
+    - "${APP_REGISTRY_NAME}:${APP_REGISTRY_ADDRESS}"
+
+x-root-cert-volume: &_x-root-cert-volume
+  type: bind
+  source: ${CONTEXT_DIR}/certs/root.crt
+  target: /etc/ssl/certs/root.crt
+  read_only: true
+  bind:
+    create_host_path: false
+
+x-kubelet-volume: &_x-kubelet-volume
+  type: volume
+  target: /var/lib/kubelet
+#  volume:
+#    propagation: shared
+
+x-k3s-agent-env: &_x-k3s-agent-env
+  K3S_URL: https://k3s-master:6443
+  K3S_TOKEN_FILE: /var/lib/rancher/k3s/server/node-token
+  K3S_NODE_NAME: k3s-agent
+  VIRTUAL_HOST: ${VHOST_STUB},*${VHOST_SUFFIX}${APP_EXTRA_VHOSTS}
+  VIRTUAL_PROTO: https
+  VIRTUAL_PORT: "443"
+  SELF_SIGNED_HOST: ${VHOST_STUB},*${VHOST_SUFFIX}${APP_EXTRA_VHOSTS}
+  HTTPS_METHOD: noredirect
+
+x-k3s-agent-base: &_x-k3s-agent-base
+  <<: *_x_extra_hosts
+  image: "docker.io/rancher/k3s:${K3S_VERSION:-latest}"
+  tmpfs:
+    - /run
+    - /var/run
+  ulimits:
+    nproc: 65535
+    nofile:
+      soft: 65535
+      hard: 65535
+  volumes:
+    - ${APP_ROOT_DIR?Please set APP_ROOT_DIR}:${APP_ROOT_MOUNT?Please specify where to mount $PWD}
+    - *_x-root-cert-volume
+    - *_x-kubelet-volume
+    - server:/var/lib/rancher/k3s/server:ro
+    - local-path-provisioner:/opt/local-path-provisioner
+  privileged: true
+  restart: always
+  networks:
+    default:
+    nginx:
+  ports:
+    - 443
+  environment:
+    <<: *_x-k3s-agent-env
+
+services:
+  k3s-agent-1:
+    <<: *_x-k3s-agent-base
+    command: [
+      "agent",
+    ]
+    environment:
+      <<: *_x-k3s-agent-env
+      K3S_NODE_NAME: agent-1
+  

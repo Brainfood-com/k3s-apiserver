@@ -77,44 +77,6 @@ x-k3s-master-base: &_x-k3s-master-base
     - *_x-root-cert-volume
     - *_x-kubelet-volume
 
-x-k3s-agent-env: &_x-k3s-agent-env
-  K3S_URL: https://k3s-master:6443
-  K3S_TOKEN_FILE: /var/lib/rancher/k3s/server/node-token
-  K3S_NODE_NAME: k3s-agent
-  VIRTUAL_HOST: ${VHOST_STUB},*${VHOST_SUFFIX}${APP_EXTRA_VHOSTS}
-  VIRTUAL_PROTO: https
-  VIRTUAL_PORT: "443"
-  SELF_SIGNED_HOST: ${VHOST_STUB},*${VHOST_SUFFIX}${APP_EXTRA_VHOSTS}
-  HTTPS_METHOD: noredirect
-
-x-k3s-agent-base: &_x-k3s-agent-base
-  <<: *_x_extra_hosts
-  image: "docker.io/rancher/k3s:${K3S_VERSION:-latest}"
-  tmpfs:
-    - /run
-    - /var/run
-  ulimits:
-    nproc: 65535
-    nofile:
-      soft: 65535
-      hard: 65535
-  volumes:
-    - ${APP_ROOT_DIR?Please set APP_ROOT_DIR}:${APP_ROOT_MOUNT?Please specify where to mount $PWD}
-#    - *_x-registries-yaml-volume
-    - *_x-root-cert-volume
-    - *_x-kubelet-volume
-    - server:/var/lib/rancher/k3s/server:ro
-    - local-path-provisioner:/opt/local-path-provisioner
-  privileged: true
-  restart: always
-  networks:
-    default:
-    nginx:
-  ports:
-    - 443
-  environment:
-    <<: *_x-k3s-agent-env
-
 x-coredns-base: &_x-coredns-base
   image: docker.io/coredns/coredns
   command: ['-conf', '/etc/coredns/Corefile']
@@ -211,24 +173,6 @@ services:
 
   k3s-coredns-3:
     <<: *_x-coredns-base
-
-  k3s-agent-1:
-    <<: *_x-k3s-agent-base
-    command: [
-      "agent",
-    ]
-    environment:
-      <<: *_x-k3s-agent-env
-      K3S_NODE_NAME: agent-1
-
-  k3s-agent-2:
-    <<: *_x-k3s-agent-base
-    command: [
-      "agent",
-    ]
-    environment:
-      <<: *_x-k3s-agent-env
-      K3S_NODE_NAME: agent-2
 
 volumes:
   etcd1-data:

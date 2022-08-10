@@ -13,6 +13,7 @@ declare -A features=(
 )
 declare -a compose_files=(-f "$APISERVER_DIR/docker-compose.yaml")
 declare -a k8s_nodes=()
+declare -i agent_count=2
 
 while [[ $# -gt 0 ]]; do
 	arg="$1"
@@ -34,6 +35,10 @@ while [[ $# -gt 0 ]]; do
 			compose_files+=(-f "$1")
 			shift
 			;;
+		(--agent-count)
+			agent_count="$1"
+			shift
+			;;
 		(-n)
 			k8s_nodes+=("$1")
 			shift
@@ -43,6 +48,11 @@ while [[ $# -gt 0 ]]; do
 			;;
 	esac
 done
+
+_create_agent_compose() {
+	sed -e "s/agent-1/agent-$1/g" < "$APISERVER_DIR/agent-compose.yaml"
+}
+
 set -- "${args[@]}"
 
 for feature in "${!features[@]}"; do
@@ -62,8 +72,17 @@ declare -a animations=('-' '\' '|' '/')
 declare -i animation_index=0
 
 _compose() {
-	docker-compose --project-directory "$CONTEXT_DIR" "${compose_files[@]}" "$@"
+	declare -a agent_files
+	declare -i agent_index=0
+	for ((agent_index=1; agent_index < $(($agent_count + 1)); agent_index++)); do
+		agent_files+=("-f <(_create_agent_compose $agent_index)")
+	done
+	eval docker-compose --project-directory "$CONTEXT_DIR" "${compose_files[@]}" "${agent_files[@]}" "$@"
 }
+declare -i agent_index=0
+for ((agent_index=1; agent_index < $(($agent_count + 1)); agent_index++)); do
+	k8s_nodes+=(k3s-agent-$agent_index)
+done
 
 etcdctl() {
 	_compose exec etcd1 etcdctl "$@"
@@ -192,7 +211,7 @@ case "$cmd" in
 
 		_compose up -d k3s-coredns-1 k3s-coredns-2 k3s-coredns-3
 		"$APISERVER_DIR/scripts/install-cluster-dns.sh" "$CONTEXT_DIR"
-		_compose up -d k3s-agent-1 k3s-agent-2 "${k8s_nodes[@]}"
+		_compose up -d "${k8s_nodes[@]}"
 		_compose up -d k3s-master-2 k3s-master-3
 		#"$APISERVER_DIR/scripts/wait-for-system-pods.sh" 1
 		_wait_for_system
